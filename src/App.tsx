@@ -21,38 +21,29 @@ const db = getFirestore(app);
 const VAPID_PUBLIC = "BGTg5ddUvPcvHTwApXthOHJSNklchloKvnrtre6HMAkO9ypJ_wP9kuDvaPGnzccaaFczuBj6VDmpXHcZRDnHi5U";
 const PUSH_BACKEND = "https://app-vdlmhgya.fly.dev";
 
-// Sound Generator (Web Audio API - zero files)
-const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-let audioCtx: AudioContext | null = null;
-function getACtx() {
-  if (!audioCtx) audioCtx = new AudioCtx();
-  if (audioCtx.state === "suspended") audioCtx.resume();
-  return audioCtx;
+// Sound Player (real MP3 files - 90KB total)
+type SoundDef = { name: string; emoji: string; color: string; play: () => void; file: string };
+
+function playSound(file: string) {
+  const audio = new Audio("/sounds/" + file);
+  audio.volume = 1.0;
+  audio.play().catch(() => {});
 }
 
-type SoundDef = { name: string; emoji: string; color: string; play: () => void };
-
 function createSounds(): SoundDef[] {
-  const tone = (freq: number, dur: number, type: OscillatorType = "sine", vol = 0.5) => {
-    const c = getACtx(), o = c.createOscillator(), g = c.createGain();
-    o.type = type; o.frequency.value = freq; g.gain.value = vol;
-    o.connect(g); g.connect(c.destination);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
-    o.start(); o.stop(c.currentTime + dur);
-  };
   return [
-    { name: "Bip", emoji: "\uD83D\uDD14", color: "#00FF88", play: () => { tone(880, 0.15); setTimeout(() => tone(1100, 0.15), 160); } },
-    { name: "Alarme", emoji: "\uD83D\uDEA8", color: "#FF0066", play: () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(i % 2 === 0 ? 800 : 600, 0.12, "square", 0.3), i * 130); } },
-    { name: "Klaxon", emoji: "\uD83D\uDE97", color: "#FFB800", play: () => { tone(300, 0.5, "sawtooth", 0.4); setTimeout(() => tone(250, 0.5, "sawtooth", 0.4), 500); } },
-    { name: "Laser", emoji: "\uD83D\uDD2B", color: "#00BBFF", play: () => { const c = getACtx(), o = c.createOscillator(), g = c.createGain(); o.type = "sawtooth"; o.frequency.value = 1500; o.frequency.exponentialRampToValueAtTime(100, c.currentTime + 0.5); g.gain.value = 0.3; g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.5); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.5); } },
-    { name: "Bisou", emoji: "\uD83D\uDE18", color: "#FF69B4", play: () => { tone(600, 0.08); setTimeout(() => tone(900, 0.06), 100); setTimeout(() => tone(1200, 0.1), 170); } },
-    { name: "Boom", emoji: "\uD83D\uDCA5", color: "#FF3B00", play: () => { const c = getACtx(), o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = 150; o.frequency.exponentialRampToValueAtTime(30, c.currentTime + 0.8); g.gain.value = 0.6; g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.8); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.8); } },
-    { name: "Fantome", emoji: "\uD83D\uDC7B", color: "#9B59B6", play: () => { const c = getACtx(), o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = 400; o.frequency.linearRampToValueAtTime(800, c.currentTime + 0.3); o.frequency.linearRampToValueAtTime(200, c.currentTime + 0.6); g.gain.value = 0.3; g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.8); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.8); } },
-    { name: "Victoire", emoji: "\uD83C\uDFC6", color: "#FFD700", play: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.2, "triangle", 0.4), i * 150)); } },
-    { name: "Robot", emoji: "\uD83E\uDD16", color: "#00CED1", play: () => { for (let i = 0; i < 8; i++) setTimeout(() => tone(200 + Math.random() * 800, 0.05, "square", 0.2), i * 60); } },
-    { name: "Sirene", emoji: "\uD83D\uDE91", color: "#FF4444", play: () => { const c = getACtx(), o = c.createOscillator(), g = c.createGain(); o.type = "sine"; g.gain.value = 0.3; o.connect(g); g.connect(c.destination); o.start(); const n = c.currentTime; for (let i = 0; i < 4; i++) { o.frequency.setValueAtTime(600, n + i * 0.4); o.frequency.linearRampToValueAtTime(900, n + i * 0.4 + 0.2); o.frequency.linearRampToValueAtTime(600, n + i * 0.4 + 0.4); } g.gain.exponentialRampToValueAtTime(0.001, n + 1.6); o.stop(n + 1.6); } },
-    { name: "Meow", emoji: "\uD83D\uDC31", color: "#FFA07A", play: () => { const c = getACtx(), o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = 700; o.frequency.exponentialRampToValueAtTime(400, c.currentTime + 0.4); g.gain.value = 0.35; g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.5); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.5); } },
-    { name: "Prout", emoji: "\uD83D\uDCA8", color: "#8B4513", play: () => { const c = getACtx(), buf = c.createBuffer(1, c.sampleRate * 0.6, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) { const t = i / c.sampleRate; d[i] = Math.sin(2 * Math.PI * (80 + Math.sin(t * 15) * 30) * t) * Math.exp(-t * 3) * 0.5 + (Math.random() - 0.5) * 0.1 * Math.exp(-t * 5); } const s = c.createBufferSource(); s.buffer = buf; const g = c.createGain(); g.gain.value = 0.6; s.connect(g); g.connect(c.destination); s.start(); } },
+    { name: "Bip", emoji: "\uD83D\uDD14", color: "#00FF88", file: "bip.mp3", play: () => playSound("bip.mp3") },
+    { name: "Alarme", emoji: "\uD83D\uDEA8", color: "#FF0066", file: "alarme.mp3", play: () => playSound("alarme.mp3") },
+    { name: "Klaxon", emoji: "\uD83D\uDE97", color: "#FFB800", file: "klaxon.mp3", play: () => playSound("klaxon.mp3") },
+    { name: "Laser", emoji: "\uD83D\uDD2B", color: "#00BBFF", file: "laser.mp3", play: () => playSound("laser.mp3") },
+    { name: "Bisou", emoji: "\uD83D\uDE18", color: "#FF69B4", file: "bisou.mp3", play: () => playSound("bisou.mp3") },
+    { name: "Boom", emoji: "\uD83D\uDCA5", color: "#FF3B00", file: "boom.mp3", play: () => playSound("boom.mp3") },
+    { name: "Fantome", emoji: "\uD83D\uDC7B", color: "#9B59B6", file: "fantome.mp3", play: () => playSound("fantome.mp3") },
+    { name: "Victoire", emoji: "\uD83C\uDFC6", color: "#FFD700", file: "victoire.mp3", play: () => playSound("victoire.mp3") },
+    { name: "Robot", emoji: "\uD83E\uDD16", color: "#00CED1", file: "robot.mp3", play: () => playSound("robot.mp3") },
+    { name: "Sirene", emoji: "\uD83D\uDE91", color: "#FF4444", file: "sirene.mp3", play: () => playSound("sirene.mp3") },
+    { name: "Meow", emoji: "\uD83D\uDC31", color: "#FFA07A", file: "meow.mp3", play: () => playSound("meow.mp3") },
+    { name: "Prout", emoji: "\uD83D\uDCA8", color: "#8B4513", file: "prout.mp3", play: () => playSound("prout.mp3") },
   ];
 }
 
