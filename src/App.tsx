@@ -7,12 +7,12 @@ import "./App.css";
 
 // Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyBKJEniid1KLEyO-gJKFoMVOCNR1fMKO0I",
+  apiKey: "AIzaSyASVcbFUz07bAT3eFKsazvALgXLtnr6rwo",
   authDomain: "voiceme-3c90b.firebaseapp.com",
   projectId: "voiceme-3c90b",
   storageBucket: "voiceme-3c90b.firebasestorage.app",
-  messagingSenderId: "945997974995",
-  appId: "1:945997974995:web:3e64c86b52a28268e03fba",
+  messagingSenderId: "874066333318",
+  appId: "1:874066333318:web:630027ca9f171ed8ad8b07",
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
