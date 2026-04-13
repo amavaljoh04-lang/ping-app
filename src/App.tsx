@@ -334,8 +334,15 @@ function FriendsScreen({ profile, friends, onReq, onRemove, setScreen, uid }: {
   const [sent, setSent] = useState<string[]>([]);
   const search = async () => {
     if (!term.trim()) return; setSearched(true);
-    const snap = await getDocs(query(collection(db, "ping_profiles"), where("username", "==", term.toLowerCase().trim())));
-    const r: Prof[] = []; snap.forEach(d => { if (d.id !== uid) r.push(d.data() as Prof); }); setRes(r);
+    const t = term.toLowerCase().trim();
+    const found: Prof[] = [];
+    // Search all ping_profiles with partial match on username
+    const snap = await getDocs(collection(db, "ping_profiles"));
+    snap.forEach(d => {
+      const p = d.data() as Prof;
+      if (d.id !== uid && (p.username?.toLowerCase().includes(t) || p.email?.toLowerCase().includes(t))) found.push(p);
+    });
+    setRes(found);
   };
   const inp: React.CSSProperties = { flex: 1, padding: "12px 16px", borderRadius: 12, border: "1px solid #1a1a2e", background: "#111118", color: "#fff", fontSize: 15, outline: "none" };
 
