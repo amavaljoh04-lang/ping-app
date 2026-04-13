@@ -151,7 +151,17 @@ function AuthScreen({ onDone }: { onDone: () => void }) {
     setErr(""); setBusy(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, pw);
+        const cred = await signInWithEmailAndPassword(auth, email, pw);
+        // Auto-create ping profile if missing (e.g. VoiceMe user)
+        const existing = await getDoc(doc(db, "ping_profiles", cred.user.uid));
+        if (!existing.exists()) {
+          // Need a username - use email prefix as default
+          const defaultName = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+          await setDoc(doc(db, "ping_profiles", cred.user.uid), {
+            uid: cred.user.uid, username: defaultName, email,
+            createdAt: serverTimestamp(), friends: [], pingsSent: 0, pingsReceived: 0,
+          });
+        }
       } else {
         if (!uname.trim() || uname.length < 3) { setErr("Pseudo: 3 caracteres minimum"); setBusy(false); return; }
         const snap = await getDocs(query(collection(db, "ping_profiles"), where("username", "==", uname.toLowerCase().trim())));
@@ -164,7 +174,7 @@ function AuthScreen({ onDone }: { onDone: () => void }) {
       }
       onDone();
     } catch (e: any) {
-      if (e.code === "auth/email-already-in-use") setErr("Email deja utilise");
+      if (e.code === "auth/email-already-in-use") setErr("Cet email a deja un compte. Utilise Connexion!");
       else if (e.code === "auth/invalid-credential") setErr("Email ou mot de passe incorrect");
       else if (e.code === "auth/weak-password") setErr("Mot de passe trop faible (6 car. min)");
       else setErr(e.message);
@@ -547,7 +557,16 @@ function App() {
       if (usr) {
         const s = await getDoc(doc(db, "ping_profiles", usr.uid));
         if (s.exists()) { setProfile(s.data() as Prof); setScreen("home"); }
-        else setScreen("auth");
+        else {
+          // Auto-create profile for existing Firebase users (e.g. from VoiceMe)
+          const defaultName = (usr.email || "user").split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+          await setDoc(doc(db, "ping_profiles", usr.uid), {
+            uid: usr.uid, username: defaultName, email: usr.email || "",
+            createdAt: serverTimestamp(), friends: [], pingsSent: 0, pingsReceived: 0,
+          });
+          const s2 = await getDoc(doc(db, "ping_profiles", usr.uid));
+          if (s2.exists()) { setProfile(s2.data() as Prof); setScreen("home"); }
+        }
       } else { setScreen("auth"); setProfile(null); }
       setLoading(false);
     });
